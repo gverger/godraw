@@ -13,14 +13,22 @@ type Drawable interface {
 	Draw()
 }
 
+type Fillable struct {
+	FillColor string `json:"fill"`
+}
+
 type Colorable struct {
 	Color string `json:"color"`
 }
 
+type DrawPoints struct {
+	DrawPoints bool `json:"draw_points"`
+}
+
 type Point struct {
-	Color string  `json:"color"`
-	X     float32 `json:"x"`
-	Y     float32 `json:"y"`
+	Colorable
+	X float32 `json:"x"`
+	Y float32 `json:"y"`
 }
 
 // Draw implements Drawable.
@@ -30,6 +38,7 @@ func (p Point) Draw() {
 
 type Line struct {
 	Colorable
+	DrawPoints
 	Points []Point `json:"points"`
 }
 
@@ -40,6 +49,8 @@ func (l Line) Draw() {
 
 type Polygon struct {
 	Colorable
+	DrawPoints
+	Fillable
 	Points []Point `json:"points"`
 }
 
@@ -56,7 +67,7 @@ type Typed struct {
 	Type string `json:"item"`
 }
 
-func (d *Drawing) UnmarshallJSON(b []byte) error {
+func (d *Drawing) UnmarshalJSON(b []byte) error {
 	var rawDrawing rawDrawing
 
 	if err := json.Unmarshal(b, &rawDrawing); err != nil {
@@ -73,11 +84,11 @@ func (d *Drawing) UnmarshallJSON(b []byte) error {
 
 		switch typed.Type {
 		case "point":
-			item = Point{}
+			item = &Point{}
 		case "line":
-			item = Line{}
+			item = &Line{}
 		case "polygon":
-			item = Polygon{}
+			item = &Polygon{}
 		default:
 			return fmt.Errorf("unknown item type: %s", typed.Type)
 		}
