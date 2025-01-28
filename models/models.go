@@ -3,6 +3,8 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type Drawing struct {
@@ -10,7 +12,6 @@ type Drawing struct {
 }
 
 type Drawable interface {
-	Draw()
 }
 
 type Fillable struct {
@@ -31,20 +32,10 @@ type Point struct {
 	Y float32 `json:"y"`
 }
 
-// Draw implements Drawable.
-func (p Point) Draw() {
-	panic("unimplemented")
-}
-
 type Line struct {
 	Colorable
 	DrawPoints
 	Points []Point `json:"points"`
-}
-
-// Draw implements Drawable.
-func (l Line) Draw() {
-	panic("unimplemented")
 }
 
 type Polygon struct {
@@ -56,7 +47,14 @@ type Polygon struct {
 
 // Draw implements Drawable.
 func (p Polygon) Draw() {
-	panic("unimplemented")
+	points := make([]rl.Vector2, len(p.Points))
+	for i, p := range p.Points {
+		points[i] = rl.NewVector2(p.X, p.Y)
+	}
+	if points[len(points)-1] != points[0] {
+		points = append(points, points[0])
+	}
+	rl.DrawLineStrip(points, rl.Green)
 }
 
 type rawDrawing struct {
