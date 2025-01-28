@@ -21,6 +21,14 @@ func NewCameraHandler() CameraHandler {
 	}
 }
 
+func (h CameraHandler) ScreenDistanceToWorld(dist float32) float32 {
+	origin := rl.GetScreenToWorld2D(rl.NewVector2(0, 0), *h.Camera)
+	x := rl.GetScreenToWorld2D(rl.NewVector2(5, 0), *h.Camera)
+	size := x.X - origin.X
+
+	return size
+}
+
 func (h *CameraHandler) Update() {
 	camera := h.Camera
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
@@ -50,19 +58,25 @@ func (h *CameraHandler) Update() {
 	}
 }
 
-func drawPoint(p models.Point) {
-	rl.DrawCircleV(rl.NewVector2(p.X, p.Y), 5, rl.Red)
+func drawPoint(p models.Point, c CameraHandler) {
+	rl.DrawCircleV(rl.NewVector2(p.X, p.Y), c.ScreenDistanceToWorld(5), rl.Red)
 }
 
-func drawLine(l models.Line) {
+func drawLine(l models.Line, c CameraHandler) {
 	points := make([]rl.Vector2, len(l.Points))
 	for i, p := range l.Points {
 		points[i] = rl.NewVector2(p.X, p.Y)
 	}
 	rl.DrawLineStrip(points, rl.Blue)
+
+	if l.DrawPoints {
+		for _, p := range l.Points {
+			drawPoint(p, c)
+		}
+	}
 }
 
-func drawPolygon(poly models.Polygon) {
+func drawPolygon(poly models.Polygon, c CameraHandler) {
 	points := make([]rl.Vector2, len(poly.Points))
 	for i, p := range poly.Points {
 		points[i] = rl.NewVector2(p.X, p.Y)
@@ -71,16 +85,21 @@ func drawPolygon(poly models.Polygon) {
 		points = append(points, points[0])
 	}
 	rl.DrawLineStrip(points, rl.Green)
+	if poly.DrawPoints {
+		for _, p := range poly.Points {
+			drawPoint(p, c)
+		}
+	}
 }
 
-func draw(shape any) {
+func draw(shape any, camera CameraHandler) {
 	switch s := shape.(type) {
 	case *models.Point:
-		drawPoint(*s)
+		drawPoint(*s, camera)
 	case *models.Line:
-		drawLine(*s)
+		drawLine(*s, camera)
 	case *models.Polygon:
-		drawPolygon(*s)
+		drawPolygon(*s, camera)
 	default:
 		fmt.Printf("not a correct shape: %+v\n", s)
 	}
@@ -95,14 +114,43 @@ func main() {
 		return
 	}
 
+	allPoints := make([]models.Point, 0)
+	for _, s := range drawing.Items {
+		allPoints = append(allPoints, s.AllPoints()...)
+	}
+
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
 
-	rl.InitWindow(800, 450, "Shapes Visualization")
+	rl.InitWindow(1200, 800, "Shapes Visualization")
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(60)
 
 	camera := NewCameraHandler()
+
+	// move camera for the whole scene
+	if len(allPoints) > 0 {
+		minX := allPoints[0].X
+		minY := allPoints[0].Y
+		maxX := allPoints[0].X
+		maxY := allPoints[0].Y
+
+		for _, p := range allPoints[1:] {
+			minX = min(minX, p.X)
+			minY = min(minY, p.Y)
+			maxX = max(maxX, p.X)
+			maxY = max(maxY, p.Y)
+		}
+
+		dx := (maxX - minX) / float32(rl.GetScreenWidth()-20)
+		dy := (maxY - minY) / float32(rl.GetScreenHeight()-20)
+
+		fmt.Println(minX, minY, maxX, maxY)
+
+		camera.Camera.Target = rl.NewVector2((minX+maxX)/2, (minY+maxY)/2)
+		camera.Camera.Zoom = 1 / max(dx, dy)
+	}
+
 	camera.Camera.Offset = rl.NewVector2(float32(rl.GetScreenWidth())/2, float32(rl.GetScreenHeight())/2)
 
 	for !rl.WindowShouldClose() {
@@ -114,7 +162,7 @@ func main() {
 		rl.BeginMode2D(*camera.Camera)
 
 		for _, s := range drawing.Items {
-			draw(s)
+			draw(s, camera)
 		}
 
 		rl.EndMode2D()
