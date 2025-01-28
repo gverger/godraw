@@ -8,7 +8,7 @@ import (
 	"github.com/matryer/is"
 )
 
-func TestPoint(t *testing.T) {
+func TestAll(t *testing.T) {
 	is := is.New(t)
 
 	jsonString := `{
@@ -42,4 +42,8 @@ func TestPoint(t *testing.T) {
 			{X: 1.3, Y: 5},
 		},
 	}, drawing.Items[2])
+
+	str, err := json.Marshal(drawing)
+	is.NoErr(err)
+	is.Equal(string(str), `{"items":[{"item":"point","color":"red","x":12,"y":32},{"item":"line","color":"blue","draw_points":true,"points":[{"color":"red","x":2,"y":3.4},{"x":1.3,"y":5}]},{"item":"polygon","color":"blue","fill":"green","points":[{"color":"red","x":2,"y":3.4},{"x":1.3,"y":5}]}]}`)
 }

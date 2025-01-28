@@ -14,15 +14,15 @@ type Drawable interface {
 }
 
 type Fillable struct {
-	FillColor string `json:"fill"`
+	FillColor string `json:"fill,omitempty"`
 }
 
 type Colorable struct {
-	Color string `json:"color"`
+	Color string `json:"color,omitempty"`
 }
 
 type DrawPoints struct {
-	DrawPoints bool `json:"draw_points"`
+	DrawPoints bool `json:"draw_points,omitempty"`
 }
 
 type Point struct {
@@ -100,4 +100,47 @@ func (d *Drawing) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+type withType struct {
+	Typed
+	Drawable `json:",inline"`
+}
+
+func (d Drawing) MarshalJSON() ([]byte, error) {
+	var rawDrawing rawDrawing
+
+	for _, v := range d.Items {
+		var t string
+		switch v.(type) {
+		case *Point, Point:
+			t = "point"
+		case *Line, Line:
+			t = "line"
+		case *Polygon, Polygon:
+			t = "polygon"
+		default:
+			return nil, fmt.Errorf("unknown drawable: %+v", v)
+		}
+
+		typed, err := json.Marshal(Typed{Type: t})
+		if err != nil {
+			return nil, err
+		}
+
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+
+		str := make([]byte, len(typed)+len(b)-1)
+		copy(str, typed)
+		copy(str[len(typed)-1:], b)
+		str[len(typed)-1] = ','
+
+		fmt.Println(string(str))
+
+		rawDrawing.Items = append(rawDrawing.Items, str)
+	}
+	return json.Marshal(rawDrawing)
 }
