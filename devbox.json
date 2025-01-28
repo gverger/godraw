@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.0/.schema/devbox.schema.json",
+  "packages": [
+    "pkgsCross.mingwW64.buildPackages.gcc"
+  ],
+  "env": {
+    "CGO_ENABLED": "1"
+  },
+  "shell": {
+    "init_hook": [
+      "export UNAME=$(powershell.exe '$env:UserName')",
+      "export WIN_USER=${UNAME%%[[:cntrl:]]}",
+      "export INSTALL_DIRECTORY=\"/mnt/c/Users/$WIN_USER/Documents/raylib/go-draw\""
+    ],
+    "scripts": {
+      "build": [
+        "GOOS=windows CC=x86_64-w64-mingw32-gcc go build -ldflags '-s -w' -gcflags=all=-d=checkptr .",
+        "rm -rf $INSTALL_DIRECTORY/godraw.exe",
+        "mkdir -p $INSTALL_DIRECTORY",
+        "mv godraw.exe $INSTALL_DIRECTORY/",
+        "echo Installed in \"$INSTALL_DIRECTORY\"",
+        "echo run $INSTALL_DIRECTORY/godraw.exe"
+      ],
+      "run": [
+        "cd $INSTALL_DIRECTORY",
+        "./godraw.exe"
+      ],
+      "test": [
+        "echo \"Error: no test specified\" && exit 1"
+      ]
+    }
+  }
+}
