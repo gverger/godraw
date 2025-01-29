@@ -1,16 +1,18 @@
 package comm
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/gverger/godraw/models"
 	"go.nanomsg.org/mangos/v3"
 	"go.nanomsg.org/mangos/v3/protocol/pull"
 	"go.nanomsg.org/mangos/v3/protocol/push"
 	_ "go.nanomsg.org/mangos/v3/transport/tcp"
 )
 
-func Listen(address string, stream chan<- []byte) error {
+func Listen(address string, stream chan<- models.Drawing) error {
 	var sock mangos.Socket
 	var err error
 	var msg []byte
@@ -31,7 +33,14 @@ func Listen(address string, stream chan<- []byte) error {
 			break
 		}
 
-		stream <- msg
+		var drawing models.Drawing
+		err := json.Unmarshal(msg, &drawing)
+		if err != nil {
+			fmt.Println("cannot unmarshal")
+			continue
+		}
+
+		stream <- drawing
 	}
 	fmt.Println("STOPPING")
 	return nil
@@ -59,8 +68,13 @@ func (s MsgSender) Close() {
 	s.sock.Close()
 }
 
-func (s MsgSender) Send(msg string) error {
-	if err := s.sock.Send([]byte(msg)); err != nil {
+func (s MsgSender) Send(drawing models.Drawing) error {
+	msg, err := json.Marshal(drawing)
+	if err != nil {
+		return fmt.Errorf("can't marshal drawing: %w", err)
+	}
+
+	if err := s.sock.Send(msg); err != nil {
 		return fmt.Errorf("can't send message on push socket: %w", err)
 	}
 

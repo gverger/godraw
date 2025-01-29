@@ -13,6 +13,12 @@ type Drawable interface {
 	AllPoints() []Point
 }
 
+type Labellable struct {
+	Label  string  `json:"label,omitempty"`
+	LabelX float32 `json:"label_x,omitempty"`
+	LabelY float32 `json:"label_y,omitempty"`
+}
+
 type Fillable struct {
 	FillColor string `json:"fill,omitempty"`
 }
@@ -27,6 +33,7 @@ type PointsDrawable struct {
 
 type Point struct {
 	Colorable
+	Labellable
 	X float32 `json:"x"`
 	Y float32 `json:"y"`
 }
@@ -39,6 +46,7 @@ func (p Point) AllPoints() []Point {
 type Line struct {
 	Colorable
 	PointsDrawable
+	Labellable
 	Points []Point `json:"points"`
 }
 
@@ -51,7 +59,45 @@ type Polygon struct {
 	Colorable
 	PointsDrawable
 	Fillable
+	Labellable
 	Points []Point `json:"points"`
+}
+
+func drawPoints(shape *PointsDrawable) {
+	shape.DrawPoints = true
+}
+
+func setColor(shape *Colorable, color string) {
+	shape.Color = color
+}
+
+func setFill(shape *Fillable, color string) {
+	shape.FillColor = color
+}
+
+type PolyOpts struct {
+}
+
+func (p PolyOpts) DrawPoints() func(*Polygon) {
+	return func(p *Polygon) { drawPoints(&p.PointsDrawable) }
+}
+
+func (p PolyOpts) Color(color string) func(*Polygon) {
+	return func(p *Polygon) { setColor(&p.Colorable, color) }
+}
+
+func (p PolyOpts) Fill(color string) func(*Polygon) {
+	return func(p *Polygon) { setFill(&p.Fillable, color) }
+}
+
+func NewPolygon(points []Point, options ...func(*Polygon)) Polygon {
+	p := Polygon{Points: points}
+
+	for _, o := range options {
+		o(&p)
+	}
+
+	return p
 }
 
 // AllPoints implements Drawable.
@@ -74,6 +120,7 @@ func (d *Drawing) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	d.Items = make([]Drawable, 0, len(rawDrawing.Items))
 	for _, raw := range rawDrawing.Items {
 		var typed Typed
 		if err := json.Unmarshal(raw, &typed); err != nil {

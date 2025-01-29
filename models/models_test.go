@@ -15,7 +15,7 @@ func TestAll(t *testing.T) {
 		"items": [
 	{ "item": "point", "color": "red", "x": 12, "y": 32 },
 	{ "item": "line", "draw_points": true, "color": "blue", "points": [{"color": "red", "x": 2, "y": 3.4}, {"x": 1.3, "y": 5}]},
-	{ "item": "polygon", "draw_points": false, "fill": "green", "color": "blue", "points": [{"color": "red", "x": 2, "y": 3.4}, {"x": 1.3, "y": 5}]}
+	{ "item": "polygon", "label": "Hey Poly", "label_x": -1, "draw_points": false, "fill": "green", "color": "blue", "points": [{"color": "red", "x": 2, "y": 3.4}, {"x": 1.3, "y": 5}]}
 		]
 	}`
 
@@ -34,6 +34,7 @@ func TestAll(t *testing.T) {
 		},
 	}, drawing.Items[1])
 	is.Equal(&models.Polygon{
+		Labellable:     models.Labellable{Label: "Hey Poly", LabelX: -1},
 		PointsDrawable: models.PointsDrawable{false},
 		Colorable:      models.Colorable{Color: "blue"},
 		Fillable:       models.Fillable{FillColor: "green"},
@@ -45,5 +46,5 @@ func TestAll(t *testing.T) {
 
 	str, err := json.Marshal(drawing)
 	is.NoErr(err)
-	is.Equal(string(str), `{"items":[{"item":"point","color":"red","x":12,"y":32},{"item":"line","color":"blue","draw_points":true,"points":[{"color":"red","x":2,"y":3.4},{"x":1.3,"y":5}]},{"item":"polygon","color":"blue","fill":"green","points":[{"color":"red","x":2,"y":3.4},{"x":1.3,"y":5}]}]}`)
+	is.Equal(string(str), `{"items":[{"item":"point","color":"red","x":12,"y":32},{"item":"line","color":"blue","draw_points":true,"points":[{"color":"red","x":2,"y":3.4},{"x":1.3,"y":5}]},{"item":"polygon","color":"blue","fill":"green","label":"Hey Poly","label_x":-1,"points":[{"color":"red","x":2,"y":3.4},{"x":1.3,"y":5}]}]}`)
 }

@@ -136,7 +136,7 @@ func draw(shape any, camera CameraHandler) {
 }
 
 func main() {
-	stream := make(chan []byte)
+	stream := make(chan models.Drawing)
 
 	address := "tcp://127.0.0.1:40899"
 	go comm.Listen(address, stream)
@@ -162,11 +162,9 @@ func main() {
 
 	for !rl.WindowShouldClose() {
 		select {
-		case msg := <-stream:
-			err := json.Unmarshal(msg, &drawing)
-			if err != nil {
-				fmt.Println("error: ", err)
-			}
+		case d := <-stream:
+			drawing = d
+			camera.FocusOn(drawing)
 		default:
 		}
 
