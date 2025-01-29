@@ -6,6 +6,7 @@ import (
 	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/gverger/godraw/comm"
 	"github.com/gverger/godraw/models"
 )
 
@@ -106,6 +107,16 @@ func draw(shape any, camera CameraHandler) {
 }
 
 func main() {
+
+	address := "tcp://127.0.0.1:40899"
+	go comm.Listen(address)
+
+	sender, err := comm.NewMsgSender(address)
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+
 	str := `{"items":[{"item":"point","color":"red","x":12,"y":32},{"item":"line","color":"blue","draw_points":true,"points":[{"color":"red","x":2,"y":3.4},{"x":1.3,"y":5}]},{"item":"polygon","color":"blue","fill":"green","points":[{"color":"red","x":20,"y":3.4},{"x":1.3,"y":5}]}]}`
 
 	var drawing models.Drawing
@@ -153,7 +164,13 @@ func main() {
 
 	camera.Camera.Offset = rl.NewVector2(float32(rl.GetScreenWidth())/2, float32(rl.GetScreenHeight())/2)
 
+	dt := 0
+
 	for !rl.WindowShouldClose() {
+		dt++
+		if dt%100 == 0 {
+			sender.Send(fmt.Sprintf("Frame %d", dt))
+		}
 		camera.Update()
 
 		rl.BeginDrawing()
