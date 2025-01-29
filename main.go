@@ -22,6 +22,35 @@ func NewCameraHandler() CameraHandler {
 	}
 }
 
+func (h *CameraHandler) FocusOn(drawing models.Drawing) {
+	points := make([]models.Point, 0)
+	for _, s := range drawing.Items {
+		points = append(points, s.AllPoints()...)
+	}
+	// move camera for the whole scene
+	if len(points) > 0 {
+		minX := points[0].X
+		minY := points[0].Y
+		maxX := points[0].X
+		maxY := points[0].Y
+
+		for _, p := range points[1:] {
+			minX = min(minX, p.X)
+			minY = min(minY, p.Y)
+			maxX = max(maxX, p.X)
+			maxY = max(maxY, p.Y)
+		}
+
+		dx := (maxX - minX) / float32(rl.GetScreenWidth()-20)
+		dy := (maxY - minY) / float32(rl.GetScreenHeight()-20)
+
+		h.Camera.Target = rl.NewVector2((minX+maxX)/2, (minY+maxY)/2)
+		h.Camera.Zoom = 1 / max(dx, dy)
+	}
+
+	h.Camera.Offset = rl.NewVector2(float32(rl.GetScreenWidth())/2, float32(rl.GetScreenHeight())/2)
+}
+
 func (h CameraHandler) ScreenDistanceToWorld(dist float32) float32 {
 	origin := rl.GetScreenToWorld2D(rl.NewVector2(0, 0), *h.Camera)
 	x := rl.GetScreenToWorld2D(rl.NewVector2(5, 0), *h.Camera)
@@ -107,15 +136,10 @@ func draw(shape any, camera CameraHandler) {
 }
 
 func main() {
+	stream := make(chan []byte)
 
 	address := "tcp://127.0.0.1:40899"
-	go comm.Listen(address)
-
-	sender, err := comm.NewMsgSender(address)
-	if err != nil {
-		fmt.Println("error:", err)
-		return
-	}
+	go comm.Listen(address, stream)
 
 	str := `{"items":[{"item":"point","color":"red","x":12,"y":32},{"item":"line","color":"blue","draw_points":true,"points":[{"color":"red","x":2,"y":3.4},{"x":1.3,"y":5}]},{"item":"polygon","color":"blue","fill":"green","points":[{"color":"red","x":20,"y":3.4},{"x":1.3,"y":5}]}]}`
 
@@ -123,11 +147,6 @@ func main() {
 	if err := json.Unmarshal([]byte(str), &drawing); err != nil {
 		fmt.Println("error:", err)
 		return
-	}
-
-	allPoints := make([]models.Point, 0)
-	for _, s := range drawing.Items {
-		allPoints = append(allPoints, s.AllPoints()...)
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
@@ -139,39 +158,23 @@ func main() {
 
 	camera := NewCameraHandler()
 
-	// move camera for the whole scene
-	if len(allPoints) > 0 {
-		minX := allPoints[0].X
-		minY := allPoints[0].Y
-		maxX := allPoints[0].X
-		maxY := allPoints[0].Y
-
-		for _, p := range allPoints[1:] {
-			minX = min(minX, p.X)
-			minY = min(minY, p.Y)
-			maxX = max(maxX, p.X)
-			maxY = max(maxY, p.Y)
-		}
-
-		dx := (maxX - minX) / float32(rl.GetScreenWidth()-20)
-		dy := (maxY - minY) / float32(rl.GetScreenHeight()-20)
-
-		fmt.Println(minX, minY, maxX, maxY)
-
-		camera.Camera.Target = rl.NewVector2((minX+maxX)/2, (minY+maxY)/2)
-		camera.Camera.Zoom = 1 / max(dx, dy)
-	}
-
-	camera.Camera.Offset = rl.NewVector2(float32(rl.GetScreenWidth())/2, float32(rl.GetScreenHeight())/2)
-
-	dt := 0
+	camera.FocusOn(drawing)
 
 	for !rl.WindowShouldClose() {
-		dt++
-		if dt%100 == 0 {
-			sender.Send(fmt.Sprintf("Frame %d", dt))
+		select {
+		case msg := <-stream:
+			err := json.Unmarshal(msg, &drawing)
+			if err != nil {
+				fmt.Println("error: ", err)
+			}
+		default:
 		}
+
 		camera.Update()
+
+		if rl.IsKeyPressed(rl.KeySpace) {
+			camera.FocusOn(drawing)
+		}
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.RayWhite)

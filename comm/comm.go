@@ -8,10 +8,9 @@ import (
 	"go.nanomsg.org/mangos/v3/protocol/pull"
 	"go.nanomsg.org/mangos/v3/protocol/push"
 	_ "go.nanomsg.org/mangos/v3/transport/tcp"
-
 )
 
-func Listen(address string) error {
+func Listen(address string, stream chan<- []byte) error {
 	var sock mangos.Socket
 	var err error
 	var msg []byte
@@ -28,11 +27,11 @@ func Listen(address string) error {
 		if err != nil {
 			return fmt.Errorf("cannot receive from mangos Socket: %w", err)
 		}
-		fmt.Printf("RECEIVED %q\n", msg)
-
 		if string(msg) == "STOP" {
 			break
 		}
+
+		stream <- msg
 	}
 	fmt.Println("STOPPING")
 	return nil
@@ -56,13 +55,11 @@ func NewMsgSender(address string) (MsgSender, error) {
 	return sender, nil
 }
 
-func (s MsgSender) Close()  {
+func (s MsgSender) Close() {
 	s.sock.Close()
 }
 
 func (s MsgSender) Send(msg string) error {
-	fmt.Printf("SENDING \"%s\"\n", msg)
-
 	if err := s.sock.Send([]byte(msg)); err != nil {
 		return fmt.Errorf("can't send message on push socket: %w", err)
 	}
