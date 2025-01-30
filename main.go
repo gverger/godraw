@@ -53,7 +53,7 @@ func (h *CameraHandler) FocusOn(drawing models.Drawing) {
 
 func (h CameraHandler) ScreenDistanceToWorld(dist float32) float32 {
 	origin := rl.GetScreenToWorld2D(rl.NewVector2(0, 0), *h.Camera)
-	x := rl.GetScreenToWorld2D(rl.NewVector2(5, 0), *h.Camera)
+	x := rl.GetScreenToWorld2D(rl.NewVector2(dist, 0), *h.Camera)
 	size := x.X - origin.X
 
 	return size
@@ -90,6 +90,10 @@ func (h *CameraHandler) Update() {
 
 func drawPoint(p models.Point, c CameraHandler) {
 	rl.DrawCircleV(rl.NewVector2(p.X, p.Y), c.ScreenDistanceToWorld(5), rl.Red)
+
+	if len(p.Label) > 0 {
+		rl.DrawTextEx(rl.GetFontDefault(), p.Label, rl.NewVector2(p.X+p.LabelX, p.Y+p.LabelY), c.ScreenDistanceToWorld(20), 0, rl.Black)
+	}
 }
 
 func drawLine(l models.Line, c CameraHandler) {

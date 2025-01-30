@@ -38,6 +38,27 @@ type Point struct {
 	Y float32 `json:"y"`
 }
 
+func NewPoint(x float32, y float32, options ...func(*Point)) Point {
+	p := Point{X: x, Y: y}
+
+	for _, o := range options {
+		o(&p)
+	}
+
+	return p
+}
+
+type PointOpts struct {
+}
+
+func (p PointOpts) Color(color string) func(*Point) {
+	return func(p *Point) { setColor(&p.Colorable, color) }
+}
+
+func (p PointOpts) Label(label string) func(*Point) {
+	return func(p *Point) { setLabel(&p.Labellable, label) }
+}
+
 // AllPoints implements Drawable.
 func (p Point) AllPoints() []Point {
 	return []Point{p}
@@ -65,6 +86,10 @@ type Polygon struct {
 
 func drawPoints(shape *PointsDrawable) {
 	shape.DrawPoints = true
+}
+
+func setLabel(shape *Labellable, label string) {
+	shape.Label = label
 }
 
 func setColor(shape *Colorable, color string) {
